@@ -31,7 +31,7 @@ class DirectoryTree:
         projects = set()
         folders = self.list_folders(self.root)
         if len(folders) == 0:
-            return [], False
+            return []
         for folder in folders[0]["child"]:
             projects.add(self._format_folder_name(folder['folder']))
         return list(projects)
@@ -41,7 +41,7 @@ class DirectoryTree:
         labs = set()
         folders = self.list_folders(parent_folder)
         if len(folders) == 0:
-            return [], False
+            return []
         for folder in folders[0]["child"]:
             labs.add(self._format_folder_name(folder['folder']))
         return list(labs)
@@ -53,7 +53,7 @@ class DirectoryTree:
         sections = set()
         folders = self.list_folders(parent_folder)
         if len(folders) == 0:
-            return [], False
+            return [], None
         for folder in folders[0]["child"]:
             sections.add(self._format_folder_name(folder['folder']))
         return list(sections), parent_folder
@@ -66,7 +66,7 @@ class DirectoryTree:
         charts = set()
         folders = self.list_folders(parent_folder)
         if len(folders) == 0:
-            return [], False
+            return [], None
         for folder in folders[0]["child"]:
             charts.add(self._format_folder_name(folder['folder']))
         return list(charts), parent_folder
