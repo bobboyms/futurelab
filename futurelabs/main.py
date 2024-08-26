@@ -3,8 +3,8 @@ import time
 import librosa
 import numpy as np
 
-from futurelabs import project
-from futurelabs import Type
+from futurelabs.lab import project
+from futurelabs.lab.chart import Type
 
 project_log = project.Project(
     project_name="teste",
@@ -74,3 +74,17 @@ print("funcionou")
 #
 #
 # time.sleep(20)
+def main():
+    project_log2 = project.Project(
+        project_name="teste wav",
+        laboratory_name="lab 2",
+        work_folder="logs"
+    ).log()
+
+    log_gradient = project_log.new_logger(
+        section_name="Gradientes ",
+        description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
+        chart_type=Type.Histogram2d
+    )
+
+    print("funcionou")

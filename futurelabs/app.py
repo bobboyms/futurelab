@@ -4,7 +4,7 @@ import streamlit as st
 from futurelabs.functions.data.load import load_histogram2d_data, load_scalar_data, load_audio_data
 from futurelabs.functions.directory import DirectoryTree
 from futurelabs.functions.charts.chart import show_histogram2d, show_metrics, show_audio
-from futurelabs import Type, get_chart_type
+from futurelabs.lab.chart import Type, get_chart_type
 from streamlit_js_eval import streamlit_js_eval
 
 
