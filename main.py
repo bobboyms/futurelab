@@ -75,16 +75,32 @@ print("funcionou")
 #
 # time.sleep(20)
 def main():
-    project_log2 = project.Project(
-        project_name="teste wav",
+    project_log = project.Project(
+        project_name="Teste",
         laboratory_name="lab 2",
         work_folder="logs"
     ).log()
 
-    log_gradient = project_log.new_logger(
-        section_name="Gradientes ",
+    log_classification = project_log.new_logger(
+        section_name="Classification Class",
         description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
-        chart_type=Type.Histogram2d
+        chart_type=Type.Classification
     )
 
-    print("funcionou")
+
+
+    log_classification.log_classification("Predições", real_label=[0,2,1,1,0,2], predicted_label=[0,2,1,1,0,2], step=1)
+    log_classification.log_classification("Predições", real_label=[0, 2, 1, 1, 0, 2],
+                                          predicted_label=[0, 2, 0, 1, 0, 2], step=2)
+    log_classification.log_classification("Predições", real_label=[0, 2, 1, 1, 0, 2],
+                                          predicted_label=[0, 2, 0, 0, 0, 2], step=3)
+    log_classification.log_classification("Predições", real_label=[0, 2, 1, 1, 0, 2],
+                                          predicted_label=[0, 2, 0, 0, 0, 2], step=3)
+    log_classification.log_classification("Predições", real_label=[0, 2, 1, 1, 0, 2],
+                                          predicted_label=[0, 2, 0, 0, 0, 2], step=3)
+    log_classification.log_histogram(f"Grad 2", np.random.normal(loc=0.0, scale=0.03, size=1 * 128 * 400))
+
+
+    time.sleep(15)
+
+main()

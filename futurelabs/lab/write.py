@@ -23,6 +23,17 @@ def histogram(values, folder, chart):
         df.write_parquet(file)
 
 
+def classification(data, folder):
+    write_chart_info(folder, data["chart_type"])
+
+    df = pl.DataFrame({
+        "step": data["step"],
+        "real_label": [data["real_label"]],
+        "predicted_label": [data["predicted_label"]],
+    })
+
+    file = folder / f"{data['step']}.parquet"
+    df.write_parquet(file)
 
 def scalar(values, folder, chart):
 

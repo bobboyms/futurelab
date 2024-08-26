@@ -6,7 +6,7 @@ import queue
 
 from pathlib import Path
 
-from futurelabs.lab.write import histogram, scalar, audio
+from futurelabs.lab.write import histogram, scalar, audio, classification
 import numpy as np
 from futurelabs.lab.chart import Type
 from futurelabs.lab.functions import get_section_folder, DirectoryManager, Serializable, get_project_folder
@@ -81,6 +81,23 @@ class Logger:
         }
         self.queue.put(data)
 
+    def log_classification(self, description: str, real_label: list[int], predicted_label: list[int], step: int):
+
+        if not isinstance(real_label, list) and all(isinstance(i, int) for i in real_label):
+            raise RuntimeError("The real label needs to be a list of integer")
+
+        if not isinstance(predicted_label, list) and all(isinstance(i, int) for i in predicted_label):
+            raise RuntimeError("The predicted label needs to be a list of integer")
+
+        data = {
+            "chart_type": Type.Classification,
+            "description": description,
+            "real_label": real_label,
+            "predicted_label": predicted_label,
+            "step": step,
+        }
+        self.queue.put(data)
+
     def log_scalar(self, description: str, value: dict[str, float], step:int):
         data = {
             "chart_type": Type.LineChart,
@@ -124,6 +141,7 @@ class Logger:
         # Dicionário para agrupar histogram_values por pasta
         histogram_data_by_folder = {}
         scalar_data_by_folder = {}
+        classification_data_by_folder = {}
 
         for data in buffer:
             # Definindo a pasta com base na "description"
@@ -140,7 +158,6 @@ class Logger:
 
             if data["chart_type"] == Type.LineChart:
 
-
                 if scalar_data_by_folder.get(folder) is None:
                     scalar_data_by_folder[folder] = []
 
@@ -151,6 +168,9 @@ class Logger:
 
             if data["chart_type"] == Type.AudioData:
                 audio(data["value"], data["sr"], data["step"], folder, Type.AudioData)
+
+            if data["chart_type"] == Type.Classification:
+                classification(data, folder)
 
 
         # Processa os histogramas para cada pasta

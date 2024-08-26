@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 import polars as pl
@@ -86,3 +87,47 @@ def load_audio_data(parent_folder, section):
     directory = os.path.join(parent_folder, section)
     audio_files = list(Path(directory).glob("*.wav"))
     return sorted(audio_files, key=lambda x: x.name)
+
+def load_classification(parent_folder, section):
+    directory = os.path.join(parent_folder, section)
+    parquet_files = list(Path(directory).glob("*.parquet"))
+    sorted_files = sorted(parquet_files, key=lambda x: x.name)
+
+
+
+    def load_parquet(file):
+        try:
+            return pl.read_parquet(file)
+        except Exception as e:
+            return None
+
+    def group_by_step(df):
+
+        grouped_data = defaultdict(lambda: {"real_label": [], "predicted_label": []})
+
+
+        for row in df.to_dicts():
+            step = row["step"]
+            real_labels = row["real_label"]
+            predicted_probs = row["predicted_label"]
+
+            grouped_data[step]["real_label"].extend(real_labels)
+            grouped_data[step]["predicted_label"].extend(predicted_probs)
+
+        new_data = [{"step": step, "real_label": values["real_label"], "predicted_label": values["predicted_label"]}
+                    for step, values in grouped_data.items()]
+
+        return pl.DataFrame(new_data)
+
+
+    with ThreadPoolExecutor() as executor:
+        dataframes = list(executor.map(load_parquet, sorted_files))
+
+    dataframes = [df for df in dataframes if df is not None]
+
+    if dataframes:
+        combined_df = pl.concat(dataframes)
+        return group_by_step(combined_df)
+    else:
+        return pl.DataFrame()
+

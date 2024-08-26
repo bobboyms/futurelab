@@ -6,6 +6,7 @@ import polars as pl
 import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 import librosa.display
+from sklearn.metrics import accuracy_score
 
 
 def download_options(fig, label):
@@ -181,3 +182,44 @@ def show_audio(audio_files, label):
 
         if fig:
             st.pyplot(fig)
+
+def show_classification(combined_df, label):
+    df = combined_df.explode(["real_label", "predicted_label"])
+
+    # Lista para armazenar acurácia e steps
+    accuracies = []
+    steps = []
+
+    # Iterar sobre os steps únicos e calcular a acurácia para cada um
+    for step in df['step'].unique():
+        step_data = df.filter(pl.col("step") == step)
+        real_labels = step_data["real_label"].to_list()
+        predicted_labels = step_data["predicted_label"].to_list()
+        accuracy = accuracy_score(real_labels, predicted_labels)
+
+        # Armazenar os valores de acurácia e step
+        accuracies.append(accuracy * 100)  # Convertendo para percentual
+        steps.append(step)
+
+    # Criar um gráfico de linha para a acurácia
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=steps,
+        y=accuracies,
+        mode='lines+markers',
+        name='Accuracy per Step'
+    ))
+
+    # Configurar o layout do gráfico
+    fig.update_layout(
+        title="Accuracy per Step",
+        xaxis_title="Step",
+        yaxis_title="Accuracy (%)",
+        xaxis=dict(tickmode='linear', tick0=1, dtick=1),  # Configurando os steps como inteiros
+        yaxis=dict(range=[0, 100], tickformat=".0f%%"),  # Configurando o eixo Y como percentual
+        margin=dict(t=50, b=50)
+    )
+
+    # Exibir o gráfico no Streamlit
+    st.plotly_chart(fig)

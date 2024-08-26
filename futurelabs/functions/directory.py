@@ -27,50 +27,41 @@ class DirectoryTree:
             "child": child_folders
         }
 
-    def get_projects(self):
-        projects = set()
-        folders = self.list_folders(self.root)
-        if len(folders) == 0:
-            return []
-        for folder in folders[0]["child"]:
-            projects.add(self._format_folder_name(folder['folder']))
-        return list(projects)
+    def _join_folder(self, parent_folder: str, folder: str = None) -> str:
 
-    def get_labs(self, parent_folder: str):
-        parent_folder = os.path.join(self.root, parent_folder.lower().replace(" ", "_"))
-        labs = set()
-        folders = self.list_folders(parent_folder)
-        if len(folders) == 0:
-            return []
-        for folder in folders[0]["child"]:
-            labs.add(self._format_folder_name(folder['folder']))
-        return list(labs)
+        if parent_folder:
+            parent_folder = parent_folder.lower().replace(" ", "_")
 
-    def get_sections(self, project: str, lab: str):
-        project = project.lower().replace(" ", "_")
-        lab = lab.lower().replace(" ", "_")
-        parent_folder = os.path.join(self.root, project, lab)
-        sections = set()
+        if folder:
+            folder = folder.lower().replace(" ", "_")
+            parent_folder = os.path.join(parent_folder, folder)
+
         folders = self.list_folders(parent_folder)
         if len(folders) == 0:
             return [], None
+
+        sections = set()
         for folder in folders[0]["child"]:
             sections.add(self._format_folder_name(folder['folder']))
+
         return list(sections), parent_folder
 
-    def get_chart(self, project: str, lab: str, section: str):
-        project = project.lower().replace(" ", "_")
-        lab = lab.lower().replace(" ", "_")
-        section = section.lower().replace(" ", "_")
-        parent_folder = os.path.join(self.root, project, lab, section)
-        charts = set()
-        folders = self.list_folders(parent_folder)
-        if len(folders) == 0:
-            return [], None
-        for folder in folders[0]["child"]:
-            charts.add(self._format_folder_name(folder['folder']))
-        return list(charts), parent_folder
+
+    def get_projects(self):
+        return self._join_folder(self.root)
+
+    def get_labs(self, parent_folder: str, folder: str = None) -> [list, str]:
+        return self._join_folder(parent_folder, folder)
+
+    def get_sections(self, parent_folder: str, folder: str) -> [list, str]:
+        return self._join_folder(parent_folder, folder)
+
+    def get_chart(self, parent_folder: str, folder: str) -> [list, str]:
+        return self._join_folder(parent_folder, folder)
 
 
     def _format_folder_name(self, folder_name: str) -> str:
         return folder_name.replace("_", " ").capitalize()
+
+
+
