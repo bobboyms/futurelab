@@ -1,8 +1,50 @@
+import librosa
 import plotly
 import streamlit as st
 import numpy as np
 import polars as pl
 import plotly.graph_objs as go
+import matplotlib.pyplot as plt
+import librosa.display
+
+
+def download_options(fig, label):
+    # Adicionar um botão discreto para abrir as opções de download
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        with st.expander("Download options"):
+            download_format = st.radio(
+                "Choose format", ("PNG", "SVG", "PDF"), key=f"{label}_format"
+            )
+
+            if download_format == "PNG":
+                st.download_button(
+                    label="Download PNG",
+                    data=fig.to_image(format="png"),
+                    file_name=f"{label}.png",
+                    mime="image/png",
+                    key=f"{label}_download_png"
+                )
+            elif download_format == "SVG":
+                st.download_button(
+                    label="Download SVG",
+                    data=fig.to_image(format="svg"),
+                    file_name=f"{label}.svg",
+                    mime="image/svg+xml",
+                    key=f"{label}_download_svg"
+                )
+            elif download_format == "PDF":
+                st.download_button(
+                    label="Download PDF",
+                    data=fig.to_image(format="pdf"),
+                    file_name=f"{label}.pdf",
+                    mime="application/pdf",
+                    key=f"{label}_download_pdf"
+                )
+
 
 def show_histogram2d(combined_df, label):
     if combined_df is not None and "value" in combined_df.columns:
@@ -29,9 +71,9 @@ def show_histogram2d(combined_df, label):
         fig = go.Figure(data=go.Histogram2d(
             x=expanded_data["step"],
             y=expanded_data["value"],
-            colorscale='Blues',
-            nbinsx=subsampled_steps,
-            nbinsy=100
+            colorscale=[[0, 'rgb(12,51,131)'], [0.25, 'rgb(10,136,186)'], [0.5, 'rgb(242,211,56)'], [0.75, 'rgb(242,143,56)'], [1, 'rgb(217,30,30)']],
+            # nbinsx=subsampled_steps,
+            # nbinsy=100,
         ))
 
         fig.update_layout(
@@ -45,8 +87,11 @@ def show_histogram2d(combined_df, label):
             }
         )
 
-        # Passar o objeto `fig` corretamente para `st.plotly_chart`
+        # Exibir o gráfico no Streamlit
         st.plotly_chart(fig)
+
+        # Adicionar um botão discreto para abrir as opções de download
+        download_options(fig, label)
 
 
 def show_metrics(combined_df, label):
@@ -75,3 +120,64 @@ def show_metrics(combined_df, label):
 
     # Exibir o gráfico no Streamlit
     st.plotly_chart(fig)
+    download_options(fig, label)
+
+
+# Criar um slider no Streamlit para selecionar a quantidade de arquivos a exibir
+
+
+# def show_audio(audio_files, label):
+#     selected_index = st.slider('Select audio file',
+#                           min_value=0,
+#                           max_value=len(audio_files) -1,
+#                           value=0)
+#
+#     st.write(audio_files[selected_index])
+
+def show_audio(audio_files, label):
+    with st.container():
+        selected_index = st.slider('Select audio file',
+                                   min_value=0,
+                                   max_value=len(audio_files) - 1,
+                                   value=0)
+
+        # Mostrar o nome do arquivo de áudio selecionado
+        selected_file = audio_files[selected_index]
+
+        # Carregar o áudio selecionado usando librosa
+        y, sr = librosa.load(selected_file, sr=None)
+
+        # Exibir o player de áudio para o arquivo selecionado
+        st.audio(str(selected_file))
+
+        fig = None
+        st1, _, _ = st.columns(3)
+
+        with st1:
+            with st.expander("Opções de visualização"):
+                chart_format = st.radio(
+                    "Choose format", ("WAVE", "MEL"), key=f"{label}_format"
+                )
+
+                if chart_format == "WAVE":
+
+                    if st.button("Visualize Waveform"):
+                        # Plotar a waveform (forma de onda) do áudio
+                        fig, ax = plt.subplots(figsize=(10, 4))
+                        librosa.display.waveshow(y, sr=sr, ax=ax)
+                        ax.set(title=f"Waveform of {selected_file.name}")
+
+                elif chart_format == "MEL":
+
+                    if st.button("Visualize Mel"):
+                        # Plotar o Mel Spectrograma do áudio
+                        S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=328)
+                        S_dB = librosa.power_to_db(S, ref=np.max)
+
+                        fig, ax = plt.subplots(figsize=(10, 4))
+                        img = librosa.display.specshow(S_dB, sr=sr, x_axis='time', y_axis='mel', ax=ax)
+                        fig.colorbar(img, ax=ax, format='%+2.0f dB')
+                        ax.set(title=f"Mel Spectrogram of {selected_file.name}")
+
+        if fig:
+            st.pyplot(fig)

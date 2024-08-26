@@ -9,10 +9,8 @@ import queue
 from numpy import number
 from pathlib import Path
 from collections import defaultdict
-from lab.write import histogram, scalar
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+from lab.write import histogram, scalar, audio
 import numpy as np
 from lab.chart import Type
 from lab.functions import get_section_folder, DirectoryManager, Serializable, get_project_folder
@@ -73,6 +71,8 @@ class Logger:
             self.directory_manager.create_folder_if_not_exists(self.section_folder)
             self.has_folder = True
 
+
+
     def log_histogram(self, description: str, value: np.array, subsample_ratio=0.1):
         self.__ensure_folder_exists()
 
@@ -91,6 +91,16 @@ class Logger:
             "chart_type": Type.LineChart,
             "description": description,
             "value": value,
+            "step": step,
+        }
+        self.queue.put(data)
+
+    def log_audio(self, description: str, value: np.array, sr:int,  step:int):
+        data = {
+            "chart_type": Type.AudioData,
+            "description": description,
+            "value": value,
+            "sr": sr,
             "step": step,
         }
         self.queue.put(data)
@@ -134,6 +144,8 @@ class Logger:
                 histogram_data_by_folder[folder].append(data["value"])
 
             if data["chart_type"] == Type.LineChart:
+
+
                 if scalar_data_by_folder.get(folder) is None:
                     scalar_data_by_folder[folder] = []
 
@@ -142,12 +154,17 @@ class Logger:
                     "step": data["step"],
                 })
 
+            if data["chart_type"] == Type.AudioData:
+                audio(data["value"], data["sr"], data["step"], folder, Type.AudioData)
+
+
         # Processa os histogramas para cada pasta
         for folder, histogram_values in histogram_data_by_folder.items():
             histogram(histogram_values, folder, Type.Histogram2d)
 
         for folder, scalar_values in scalar_data_by_folder.items():
             scalar(scalar_values, folder, Type.LineChart)
+
 
 
     def stop(self):

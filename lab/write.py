@@ -1,6 +1,8 @@
 from datetime import datetime
 
 import polars as pl
+import soundfile as sf
+
 
 def write_chart_info(folder, chart):
     file_path = folder / "chart_info"
@@ -48,3 +50,10 @@ def scalar(values, folder, chart):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H:%M:%S:%f")[:-3]
     file = folder / f"{timestamp}.parquet"
     df.write_parquet(file)
+
+
+def audio(value, sr, step, folder, chart):
+    write_chart_info(folder, chart)
+    file = folder / f"{step}.wav"
+    sf.write(file, value, sr)
+

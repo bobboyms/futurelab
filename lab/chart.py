@@ -6,6 +6,7 @@ from pathlib import Path
 class Type(Enum):
     Histogram2d = 1
     LineChart = 2
+    AudioData = 3
 
 
 def get_chart_type(parent_folder, chart):

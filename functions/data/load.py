@@ -82,3 +82,10 @@ def load_scalar_data(parent_folder, section):
         return combined_df
     else:
         return pl.DataFrame()
+
+
+
+def load_audio_data(parent_folder, section):
+    directory = os.path.join(parent_folder, section)
+    audio_files = list(Path(directory).glob("*.wav"))
+    return sorted(audio_files, key=lambda x: x.name)
