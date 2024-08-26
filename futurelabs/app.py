@@ -13,10 +13,8 @@ directory_tree = DirectoryTree(root)
 
 
 st.set_page_config(layout="wide")
-# st.set_page_config(layout="centered")
 
 page_width = streamlit_js_eval(js_expressions='window.innerWidth', key='WIDTH',  want_output = True,)
-print(page_width)
 
 with st.container():
     # Criando duas colunas
@@ -32,11 +30,8 @@ with st.container():
 
 
 
-
 charts, parent_folder = directory_tree.get_chart(project_choice, lab_choice, section_choice)
 num_columns = 1 if page_width < 1100 else 2
-
-# st.write(page_width)
 
 
 for i in range(0, len(charts), num_columns):
