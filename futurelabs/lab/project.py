@@ -6,10 +6,10 @@ import queue
 
 from pathlib import Path
 
-from futurelabs.lab.write import histogram, scalar, audio
+from futurelabs import histogram, scalar, audio
 import numpy as np
-from futurelabs.lab.chart import Type
-from futurelabs.lab.functions import get_section_folder, DirectoryManager, Serializable, get_project_folder
+from futurelabs import Type
+from futurelabs import get_section_folder, DirectoryManager, Serializable, get_project_folder
 
 
 class Project(Serializable):

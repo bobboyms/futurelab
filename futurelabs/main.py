@@ -3,8 +3,8 @@ import time
 import librosa
 import numpy as np
 
-from futurelabs.lab import project
-from futurelabs.lab.chart import Type
+from futurelabs import project
+from futurelabs import Type
 
 project_log = project.Project(
     project_name="teste",
