@@ -3,8 +3,8 @@ import time
 import librosa
 import numpy as np
 
-from lab import project
-from lab.chart import Type
+from futurelabs.lab import project
+from futurelabs.lab.chart import Type
 
 project_log = project.Project(
     project_name="teste",
@@ -58,7 +58,7 @@ log_audio = project_log2.new_logger(
     chart_type = Type.Histogram2d
 )
 
-audio_path = '127_sample.wav'
+audio_path = '../127_sample.wav'
 data, sr = librosa.load(audio_path, sr=None)
 for i in range(10):
     log_scalar.log_histogram(f"Grad 2", np.random.normal(loc=0.0, scale=0.03, size=1* 128 * 400))
