@@ -3,9 +3,6 @@ from datetime import datetime
 from pathlib import Path
 import polars as pl
 from concurrent.futures import ThreadPoolExecutor
-import streamlit as st
-
-
 
 
 # @st.cache_data
