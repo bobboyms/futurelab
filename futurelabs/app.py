@@ -1,15 +1,24 @@
 import streamlit as st
 
 
-from futurelabs.functions.data.load import load_histogram2d_data, load_scalar_data, load_audio_data
-from futurelabs.functions.directory import DirectoryTree
-from futurelabs.functions.charts.chart import show_histogram2d, show_metrics, show_audio
-from futurelabs.lab.chart import Type, get_chart_type
+from functions.data.load import load_histogram2d_data, load_scalar_data, load_audio_data
+from functions.directory import DirectoryTree
+from functions.charts.chart import show_histogram2d, show_metrics, show_audio
+from lab.chart import Type, get_chart_type
 from streamlit_js_eval import streamlit_js_eval
+
+# import sys
+# import os
+#
+# # Adiciona o diretório raiz ao sys.path
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 root = "logs"
+
+
 directory_tree = DirectoryTree(root)
+
 
 
 st.set_page_config(layout="wide")

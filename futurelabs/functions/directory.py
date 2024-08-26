@@ -6,8 +6,15 @@ class DirectoryTree:
     def __init__(self, root: str):
         self.root = root
 
+    def directory_exists(self, parent_folder: str) -> bool:
+        return os.path.isdir(parent_folder)
+
+
     def list_folders(self, parent_folder: str) -> list:
-        return [self._build_tree(parent_folder)]
+        if self.directory_exists(parent_folder):
+            return [self._build_tree(parent_folder)]
+
+        return []
 
     def _build_tree(self, folder: str) -> dict:
         child_folders = []
