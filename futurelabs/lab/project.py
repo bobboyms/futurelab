@@ -95,7 +95,7 @@ class Logger:
 
     def log_classification(self, description: str, real_label: list[int], predicted_label: list[int], step: int):
 
-        if not isinstance(real_label, list) and all(isinstance(i, int) for i in real_label):
+        if not all(isinstance(x, int) for x in real_label):
             raise RuntimeError("The real label needs to be a list of integer")
 
 
