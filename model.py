@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -74,6 +75,7 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     target_list = []
     output_list = []
+    loss_list = []
     for data, target in train_loader:
         optimizer.zero_grad()
         output = model(data)
@@ -82,7 +84,7 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         # print(output)
-
+        loss_list.append(loss.item())
         output_list.append(output)
         target_list.append(target)
         running_loss += loss.item() * data.size(0)
@@ -90,9 +92,11 @@ for epoch in range(num_epochs):
     epoch_loss = running_loss / len(train_loader.dataset)
     outputs = torch.cat(output_list).flatten().tolist()
     targets = torch.cat(target_list).flatten().tolist()
+    mean_loss = np.mean(loss_list)
 
-    print(f'Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}')
+    print(f'Epoch {epoch+1}/{num_epochs}, Loss: {mean_loss:.4f}')
     log_class.log_classification("Classificação",targets, outputs, epoch)
+    log_class.log_scalar("Loss", {"train": mean_loss.item(), "Teste":0.0},epoch)
 
 
 time.sleep(20)
