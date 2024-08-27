@@ -30,7 +30,7 @@ def classification(data, folder):
         {
             "step": data["step"],
             "real_label": [data["real_label"]],
-            "predicted_label": [data["predicted_label"]],
+            "predicted_label": data["predicted_label"],
         }
     )
 
