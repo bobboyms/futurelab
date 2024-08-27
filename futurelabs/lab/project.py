@@ -3,6 +3,7 @@ import os.path
 import time
 import threading
 import queue
+from datetime import datetime
 
 from pathlib import Path
 
@@ -11,9 +12,16 @@ import numpy as np
 from futurelabs.lab.chart import Type
 from futurelabs.lab.functions import get_section_folder, DirectoryManager, Serializable, get_project_folder
 
+def get_current_time():
+    # Obter a hora atual do computador
+    now = datetime.now()
+
+    # Formatar como HH:MM:SS
+    time_str = now.strftime("%H:%M:%S")
+    return time_str
 
 class Project(Serializable):
-    def __init__(self, project_name: str, laboratory_name: str, work_folder: str):
+    def __init__(self, project_name: str, work_folder: str, laboratory_name=None):
         self._directory_manager = DirectoryManager()
         self.laboratory_name = laboratory_name
         self.project_name = project_name
@@ -24,6 +32,10 @@ class Project(Serializable):
     def __serialize(self):
         project_dict = self.to_dict()
 
+        if self.laboratory_name is None:
+            self.laboratory_name = get_current_time()
+
+
         folder = get_project_folder(config={
             "work_folder": self.work_folder,
             "laboratory_name": self.laboratory_name,
@@ -32,7 +44,7 @@ class Project(Serializable):
 
         self._directory_manager.create_folder_if_not_exists(folder)
 
-        src = folder / 'project.json'
+        src = folder / f'{self.laboratory_name}.json'
 
         with open(src, 'w') as json_file:
             json.dump(project_dict, json_file, indent=4)

@@ -548,6 +548,7 @@ def generate_metrics_table(df, threshold_values):
     # Converter os resultados em um DataFrame
     metrics_df = pl.DataFrame(results)
 
+
     # Exibir a tabela no Streamlit
     st.dataframe(metrics_df)
 

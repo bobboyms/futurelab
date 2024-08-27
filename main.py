@@ -78,8 +78,8 @@ def main():
 
     project_log = project.Project(
         project_name="Teste",
-        laboratory_name="lab 1",
-        work_folder="logs"
+        work_folder="logs",
+        laboratory_name="lab 2",
     ).log()
 
     log_classification = project_log.new_logger(
