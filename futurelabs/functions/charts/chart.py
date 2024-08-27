@@ -190,7 +190,7 @@ def show_accuracy(df, threshold):
     # Iterar sobre os steps únicos e calcular a acurácia para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_list()
+        real_labels = step_data["real_label"].to_numpy().astype(int).to_list()
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         accuracy = accuracy_score(real_labels, predicted_labels)
 
@@ -232,7 +232,7 @@ def show_confusion_matrix(df, threshold):
     step_data = df.filter(pl.col("step") == specific_step)
 
     # Extrair os rótulos reais e previstos
-    real_labels = step_data["real_label"].to_list()
+    real_labels = step_data["real_label"].to_list().astype(int)
     predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold).tolist()
 
     if real_labels and predicted_labels:
@@ -272,7 +272,7 @@ def show_precision(df,threshold):
     # Iterar sobre os steps únicos e calcular a precisão para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy()
+        real_labels = step_data["real_label"].to_numpy().astype(int)
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         precision = precision_score(real_labels, predicted_labels, average='macro', zero_division=0)
 
@@ -318,7 +318,7 @@ def show_recall(df,threshold):
     # Iterar sobre os steps únicos e calcular a revocação para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy()
+        real_labels = step_data["real_label"].to_numpy().astype(int)
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         recall = recall_score(real_labels, predicted_labels, average='macro', zero_division=0)
 
@@ -364,7 +364,7 @@ def show_auc_roc(df,threshold):
     # Iterar sobre os steps únicos e calcular a AUC-ROC para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy()
+        real_labels = step_data["real_label"].to_numpy().astype(int)
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
 
         # Calcular a curva ROC e a AUC
@@ -427,7 +427,7 @@ def show_specificity(df, threshold):
     # Iterar sobre os steps únicos e calcular a especificidade para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy()
+        real_labels = step_data["real_label"].to_numpy().astype(int)
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         specificity = calculate_specificity(real_labels, predicted_labels)
 
@@ -470,7 +470,7 @@ def show_f1_score(df, threshold):
     # Iterar sobre os steps únicos e calcular o F1 Score para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy()
+        real_labels = step_data["real_label"].to_numpy().astype(int)
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         f1 = f1_score(real_labels, predicted_labels, average='macro', zero_division=0)
 
@@ -523,7 +523,7 @@ def generate_metrics_table(df, threshold_values):
         # Iterar sobre os steps únicos e calcular as métricas para cada um
         for step in df['step'].unique():
             step_data = df.filter(pl.col("step") == step)
-            real_labels = step_data["real_label"].to_numpy()
+            real_labels = step_data["real_label"].to_numpy().astype(int)
             predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(), threshold)
 
             # Calcular as métricas

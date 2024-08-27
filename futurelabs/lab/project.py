@@ -93,10 +93,11 @@ class Logger:
         }
         self.queue.put(data)
 
-    def log_classification(self, description: str, real_label: list[int], predicted_label: list[int], step: int):
+    def log_classification(self, description: str, real_label: list[int], predicted_label: list[float], step: int):
 
-        if not all(isinstance(x, int) for x in real_label):
-            raise RuntimeError("The real label needs to be a list of integer")
+        # is_ints = all(isinstance(x, int) for x in real_label)
+        # if not is_ints:
+        #     raise RuntimeError("The real label needs to be a list of integer")
 
 
         data = {
