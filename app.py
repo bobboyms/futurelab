@@ -26,13 +26,13 @@ def dashboard():
     with st.container():
         st.sidebar.title("Menu")
         projects_options, parent_folder = directory_tree.get_projects()
-        project_choice = st.sidebar.selectbox("Selecione um projeto", projects_options)
+        project_choice = st.sidebar.selectbox("Select a project", projects_options)
 
         labs_options, parent_folder = directory_tree.get_labs(parent_folder, project_choice)
-        lab_choice = st.sidebar.selectbox("Selecione um Lab", labs_options)
+        lab_choice = st.sidebar.selectbox("Select a lab", labs_options)
 
         sections_options, parent_folder = directory_tree.get_sections(parent_folder, lab_choice)
-        section_choice = st.selectbox("Selecione uma Sessão", sections_options)
+        section_choice = st.selectbox("Select a section", sections_options)
 
     charts, parent_folder = directory_tree.get_chart(parent_folder, section_choice)
     num_columns = 1 if page_width < 1100 else 2
@@ -62,13 +62,13 @@ def dashboard():
 
                 if chart_type == Type.AudioData:
                     audio_list = load_audio_data(parent_folder, chart)
-                    show_audio(audio_list, chart)
+                    if len(audio_list) > 0:
+                        show_audio(audio_list, chart)
 
                 if chart_type == Type.Classification:
                     classification_df = load_classification(parent_folder, chart)
-                    print(classification_df)
-
-                    show_classification(classification_df, chart)
+                    if not classification_df.is_empty():
+                        show_classification(classification_df, chart)
 
 
 st.set_page_config(

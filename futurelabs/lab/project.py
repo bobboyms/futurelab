@@ -86,8 +86,6 @@ class Logger:
         if not isinstance(real_label, list) and all(isinstance(i, int) for i in real_label):
             raise RuntimeError("The real label needs to be a list of integer")
 
-        if not isinstance(predicted_label, list) and all(isinstance(i, int) for i in predicted_label):
-            raise RuntimeError("The predicted label needs to be a list of integer")
 
         data = {
             "chart_type": Type.Classification,
