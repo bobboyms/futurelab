@@ -108,6 +108,8 @@ def show_metrics(combined_df, label):
     # Criar o gráfico de linha com Plotly
     fig = go.Figure()
 
+    print("Combined DF")
+    print(combined_df)
     # Obter a lista de colunas que não seja a coluna "step"
     metric_columns = combined_df.columns[1:]  # Ignora a primeira coluna que é "step"
 
