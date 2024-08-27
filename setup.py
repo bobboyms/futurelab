@@ -5,7 +5,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='futurelabs',
-    version='0.1.0',
+    version='0.1.1',
     description='FutureLabs: An awesome model log and chart',
     author='Thiago Luiz Rodrigues',
     author_email='thiago@rodriguesthiago.me',

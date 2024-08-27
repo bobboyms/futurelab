@@ -35,7 +35,7 @@ def classification(data, folder):
         {
             "step": data["step"],
             "real_label": [numpy.array(data["real_label"]).astype(int).tolist()],
-            "predicted_label": [numpy.array(data["predicted_label"]).astype(float).tolist()],
+            "predicted_label": [data["predicted_label"]],
         }
     )
 
