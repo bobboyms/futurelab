@@ -190,7 +190,7 @@ def show_accuracy(df, threshold):
     # Iterar sobre os steps únicos e calcular a acurácia para cada um
     for step in df['step'].unique():
         step_data = df.filter(pl.col("step") == step)
-        real_labels = step_data["real_label"].to_numpy().astype(int).to_list()
+        real_labels = step_data["real_label"].to_list()
         predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold)
         accuracy = accuracy_score(real_labels, predicted_labels)
 
@@ -232,7 +232,7 @@ def show_confusion_matrix(df, threshold):
     step_data = df.filter(pl.col("step") == specific_step)
 
     # Extrair os rótulos reais e previstos
-    real_labels = step_data["real_label"].to_list().astype(int)
+    real_labels = step_data["real_label"].to_list()
     predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(),threshold).tolist()
 
     if real_labels and predicted_labels:

@@ -2,6 +2,7 @@ from datetime import datetime
 
 import polars as pl
 import soundfile as sf
+from sympy.stats.sampling.sample_numpy import numpy
 
 
 def write_chart_info(folder, chart):
@@ -26,11 +27,15 @@ def histogram(values, folder, chart):
 def classification(data, folder):
     write_chart_info(folder, data["chart_type"])
 
+    # print(len(data["real_label"]))
+    # print(len(data["predicted_label"]))
+    # print(data["step"])
+
     df = pl.DataFrame(
         {
             "step": data["step"],
-            "real_label": [data["real_label"]],
-            "predicted_label": data["predicted_label"],
+            "real_label": [numpy.array(data["real_label"]).astype(int).tolist()],
+            "predicted_label": [data["predicted_label"]],
         }
     )
 
