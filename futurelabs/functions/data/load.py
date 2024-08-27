@@ -88,12 +88,69 @@ def load_audio_data(parent_folder, section):
     audio_files = list(Path(directory).glob("*.wav"))
     return sorted(audio_files, key=lambda x: x.name)
 
+# def load_classification(parent_folder, section):
+#     directory = os.path.join(parent_folder, section)
+#     parquet_files = list(Path(directory).glob("*.parquet"))
+#     sorted_files = sorted(parquet_files, key=lambda x: x.name)
+#
+#
+#
+#     def load_parquet(file):
+#         try:
+#             return pl.read_parquet(file)
+#         except Exception as e:
+#             return None
+#
+#     def group_by_step(df):
+#
+#         grouped_data = defaultdict(lambda: {"real_label": [], "predicted_label": []})
+#
+#
+#         for row in df.to_dicts():
+#             step = row["step"]
+#             real_labels = row["real_label"]
+#             predicted_probs = row["predicted_label"]
+#
+#             grouped_data[step]["real_label"].extend(real_labels)
+#             grouped_data[step]["predicted_label"].extend(predicted_probs)
+#
+#         new_data = [{"step": step, "real_label": values["real_label"], "predicted_label": values["predicted_label"]}
+#                     for step, values in grouped_data.items()]
+#
+#         return pl.DataFrame(new_data)
+#
+#     def convert_dtypes(df):
+#         if "real_label" in df.columns:
+#             df = df.with_column(pl.col("real_label").cast(pl.List(pl.Int64)))
+#         if "predicted_label" in df.columns:
+#             df = df.with_column(pl.col("predicted_label").cast(pl.List(pl.Float64)))
+#         return df
+#
+#
+#     with ThreadPoolExecutor() as executor:
+#         dataframes = list(executor.map(load_parquet, sorted_files))
+#
+#     dataframes = [df for df in dataframes if df is not None]
+#     # Converte tipos de dados antes de concatenar
+#     dataframes = [convert_dtypes(df) for df in dataframes]
+#
+#     if dataframes:
+#         combined_df = pl.concat(dataframes)
+#         return group_by_step(combined_df)
+#     else:
+#         return pl.DataFrame()
+#
+
+import os
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
+import polars as pl
+
 def load_classification(parent_folder, section):
     directory = os.path.join(parent_folder, section)
     parquet_files = list(Path(directory).glob("*.parquet"))
     sorted_files = sorted(parquet_files, key=lambda x: x.name)
-
-
 
     def load_parquet(file):
         try:
@@ -102,9 +159,7 @@ def load_classification(parent_folder, section):
             return None
 
     def group_by_step(df):
-
         grouped_data = defaultdict(lambda: {"real_label": [], "predicted_label": []})
-
 
         for row in df.to_dicts():
             step = row["step"]
@@ -119,15 +174,24 @@ def load_classification(parent_folder, section):
 
         return pl.DataFrame(new_data)
 
+    def convert_dtypes(df):
+        if "real_label" in df.columns:
+            df = df.with_columns([pl.col("real_label").cast(pl.List(pl.Int64))])
+        if "predicted_label" in df.columns:
+            df = df.with_columns([pl.col("predicted_label").cast(pl.Float64)])
+        return df
 
     with ThreadPoolExecutor() as executor:
         dataframes = list(executor.map(load_parquet, sorted_files))
 
+    # Filtra apenas dataframes válidos
     dataframes = [df for df in dataframes if df is not None]
+
+    # Converte tipos de dados antes de concatenar
+    # dataframes = [convert_dtypes(df) for df in dataframes]
 
     if dataframes:
         combined_df = pl.concat(dataframes)
         return group_by_step(combined_df)
     else:
         return pl.DataFrame()
-

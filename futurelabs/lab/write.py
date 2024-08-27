@@ -34,7 +34,7 @@ def classification(data, folder):
     df = pl.DataFrame(
         {
             "step": data["step"],
-            "real_label": [numpy.array(data["real_label"]).astype(int).tolist()],
+            "real_label": [data["real_label"]],
             "predicted_label": [data["predicted_label"]],
         }
     )
