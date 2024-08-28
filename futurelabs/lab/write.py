@@ -44,32 +44,62 @@ def classification(data, folder):
     file = folder / f"{data['step']}.parquet"
     df.write_parquet(file)
 
-def scalar(values, folder, chart):
 
+def scalar(values, step, folder, chart):
     write_chart_info(folder, chart)
 
-    steps = []
-    metrics_columns = {}
-
-    # Iterar sobre cada dicionário na lista e organizar em colunas
-    for entry in values:
-        steps.append(entry["step"])  # Adiciona o valor de step à lista steps
-        for key, value in entry["value"].items():
-            if key not in metrics_columns:
-                metrics_columns[key] = []
-            metrics_columns[key].append(value)
-
-    # Criar um dicionário organizado com os dados em colunas
-    organized_data = {
-        "step": steps,
-        **metrics_columns  # Expande as colunas de metrics dinamicamente
+    data = {
+        "step": step
     }
 
-    # Criar o DataFrame Polars
-    df = pl.DataFrame(organized_data)
-    timestamp = datetime.now().strftime("%Y_%m_%d_%H:%M:%S:%f")[:-3]
-    file = folder / f"{timestamp}.parquet"
+    for key in values:
+        data[key] = values[key]
+
+    df = pl.DataFrame(data)
+
+    file = folder / f"{step}.parquet"
     df.write_parquet(file)
+
+# def scalar(values, folder, chart):
+#
+#     write_chart_info(folder, chart)
+#
+#     steps = []
+#     metrics_columns = {}
+#
+#     # Iterar sobre cada dicionário na lista e organizar em colunas
+#     for entry in values:
+#         steps.append(entry["step"])  # Adiciona o valor de step à lista steps
+#         for key, value in entry["value"].items():
+#             if key not in metrics_columns:
+#                 metrics_columns[key] = []
+#             metrics_columns[key].append(value)
+#
+#     # Criar um dicionário organizado com os dados em colunas
+#     organized_data = {
+#         "step": steps,
+#         **metrics_columns  # Expande as colunas de metrics dinamicamente
+#     }
+#
+#     # Criar o DataFrame Polars
+#     df = pl.DataFrame(organized_data)
+#
+#     # Definir explicitamente os tipos das colunas
+#     df = df.with_columns([
+#         pl.col("step").cast(pl.Int32),  # Definir "step" como Int32
+#     ])
+#
+#     # Definir as colunas de métricas como Float32
+#     metric_columns = [pl.col(col).cast(pl.Float32) for col in metrics_columns.keys()]
+#     df = df.with_columns(metric_columns)
+#
+#     # Escrever o DataFrame em um arquivo Parquet
+#     timestamp = datetime.now().strftime("%Y_%m_%d_%H:%M:%S:%f")[:-3]
+#     file = folder / f"{timestamp}.parquet"
+#     df.write_parquet(file)
+#     # timestamp = datetime.now().strftime("%Y_%m_%d_%H:%M:%S:%f")[:-3]
+#     file = folder / f"{timestamp}.parquet"
+#     df.write_parquet(file)
 
 
 def audio(value, sr, step, folder, chart):

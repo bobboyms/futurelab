@@ -1,7 +1,9 @@
+import librosa
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from numba import float32
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -19,6 +21,12 @@ project_log = Project(
 
 log_class = project_log.new_logger(
         section_name="Classificação",
+        description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
+        chart_type=Type.Classification
+    )
+
+log_gradientes = project_log.new_logger(
+        section_name="Gradientes do modelo",
         description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
         chart_type=Type.Classification
     )
@@ -51,16 +59,17 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 class BreastCancerModel(nn.Module):
     def __init__(self):
         super(BreastCancerModel, self).__init__()
-        self.fc1 = nn.Linear(30, 16)
-        self.fc2 = nn.Linear(16, 8)
-        self.fc3 = nn.Linear(8, 1)
+        self.fc1 = nn.Linear(30, 30)
+        self.fc2 = nn.Linear(30, 30)
+        self.fc3 = nn.Linear(30, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
+        x = self.fc1(x) + x
+        x = torch.relu(x)
+        x = self.fc2(x) + x
+        x = torch.relu(x)
         x = self.fc3(x)
-        # x = self.sigmoid(x)
         return x
 
 model = BreastCancerModel()
@@ -68,7 +77,7 @@ model = BreastCancerModel()
 criterion = nn.BCEWithLogitsLoss()  # Binary Cross-Entropy Loss
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-num_epochs = 20
+num_epochs = 10
 model.train()
 
 for epoch in range(num_epochs):
@@ -81,6 +90,13 @@ for epoch in range(num_epochs):
         output = model(data)
         loss = criterion(output, target)
         loss.backward()
+
+        # model.fc1.weight.grad
+
+        log_gradientes.log_histogram("FC 1",model.fc1.weight.grad, subsample_ratio=1.0)
+        log_gradientes.log_histogram("FC 2", model.fc2.weight.grad, subsample_ratio=1.0)
+        log_gradientes.log_histogram("FC 3", model.fc3.weight.grad, subsample_ratio=1.0)
+
         optimizer.step()
 
         # print(output)
@@ -92,11 +108,15 @@ for epoch in range(num_epochs):
     epoch_loss = running_loss / len(train_loader.dataset)
     outputs = torch.cat(output_list).flatten().tolist()
     targets = torch.cat(target_list).flatten().tolist()
-    mean_loss = np.mean(loss_list)
+    mean_loss = np.mean(loss_list).astype(float)
 
     print(f'Epoch {epoch+1}/{num_epochs}, Loss: {mean_loss:.4f}')
     log_class.log_classification("Classificação",targets, outputs, epoch)
-    log_class.log_scalar("Loss", {"train": mean_loss.item(), "Teste":0.0},epoch)
+    log_class.log_scalar("Loss", {"train": mean_loss, "teste":0.025 * epoch},epoch)
+
+    audio_path = '127_sample.wav'
+    data, sr = librosa.load(audio_path, sr=None)
+    log_class.log_audio("Amostras de audio", data, sr, epoch)
 
 
 time.sleep(20)

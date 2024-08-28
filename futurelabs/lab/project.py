@@ -84,6 +84,7 @@ class Logger:
         self.__ensure_folder_exists()
 
         # print(len(value) * subsample_ratio)
+        value = value.numpy().flatten()
         subsampled_data = np.random.choice(value, size=int(len(value) * subsample_ratio), replace=False)
 
         data = {
@@ -169,13 +170,14 @@ class Logger:
 
             if data["chart_type"] == Type.LineChart:
 
-                if scalar_data_by_folder.get(folder) is None:
-                    scalar_data_by_folder[folder] = []
-
-                scalar_data_by_folder[folder].append({
-                    "value": data["value"],
-                    "step": data["step"],
-                })
+                # if scalar_data_by_folder.get(folder) is None:
+                #     scalar_data_by_folder[folder] = []
+                #
+                # scalar_data_by_folder[folder].append({
+                #     "value": data["value"],
+                #     "step": data["step"],
+                # })
+                scalar(data["value"], data["step"], folder, Type.LineChart)
 
             if data["chart_type"] == Type.AudioData:
                 audio(data["value"], data["sr"], data["step"], folder, Type.AudioData)
@@ -188,8 +190,8 @@ class Logger:
         for folder, histogram_values in histogram_data_by_folder.items():
             histogram(histogram_values, folder, Type.Histogram2d)
 
-        for folder, scalar_values in scalar_data_by_folder.items():
-            scalar(scalar_values, folder, Type.LineChart)
+        # for folder, scalar_values in scalar_data_by_folder.items():
+        #     scalar(scalar_values, folder, Type.LineChart)
 
 
 
