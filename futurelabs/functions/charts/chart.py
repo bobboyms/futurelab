@@ -204,66 +204,7 @@ def show_confusion_matrix(df):
         st.write(f"No data available for Step {specific_step}")
 
 
-def generate_metrics_table(df, threshold_values):
-    # DataFrame para armazenar os resultados
-    results = []
-
-    # Iterar sobre cada threshold e calcular as métricas
-    for threshold in threshold_values:
-        row = {"Threshold": threshold}
-
-        accuracy_list = []
-        precision_list = []
-        recall_list = []
-        specificity_list = []
-        auc_list = []
-        f1_score_list = []
-
-        # Iterar sobre os steps únicos e calcular as métricas para cada um
-        for step in df['step'].unique():
-            step_data = df.filter(pl.col("step") == step)
-            real_labels = step_data["real_label"].to_numpy().astype(int)
-            predicted_labels = process_binary_classification(step_data["predicted_label"].to_numpy(), threshold)
-
-            # Calcular as métricas
-            accuracy_list.append(accuracy_score(real_labels, predicted_labels))
-            precision_list.append(precision_score(real_labels, predicted_labels, average='macro', zero_division=0))
-            recall_list.append(recall_score(real_labels, predicted_labels, average='macro', zero_division=0))
-            specificity_list.append(calculate_specificity(real_labels, predicted_labels))
-            fpr, tpr, _ = roc_curve(real_labels, predicted_labels, pos_label=1)
-            auc_list.append(auc(fpr, tpr))
-            f1_score_list.append(f1_score(real_labels, predicted_labels, average='macro', zero_division=0))
-
-        # Média das métricas para cada threshold
-        row["Accuracy"] = np.mean(accuracy_list)
-        row["Precision"] = np.mean(precision_list)
-        row["Sensitivity"] = np.mean(recall_list)
-        row["Specificity"] = np.mean(specificity_list)
-        row["AUC-ROC"] = np.mean(auc_list)
-        row["F1 Score"] = np.mean(f1_score_list)
-
-        results.append(row)
-
-    # Converter os resultados em um DataFrame
-    metrics_df = pl.DataFrame(results)
-
-
-    # Exibir a tabela no Streamlit
-    st.dataframe(metrics_df)
-
-    # Criação do botão de download
-    st.download_button(
-        label="⬇️",  # Sem texto no botão
-        data=metrics_df.to_pandas().to_csv(index=False),
-        file_name="metrics_table.csv",
-        mime='text/csv',
-        help="Download CSV",
-        key="download_csv"
-    )
-
-# @st.cache_data(ttl=120)
-
-
+@st.cache_data(ttl=120)
 def apply_classification(_combined_df, threshold):
 
     # Explode as listas de rótulos
@@ -333,6 +274,44 @@ def apply_classification(_combined_df, threshold):
 
     return grouped_df
 
+@st.cache_data(ttl=120)
+def calculate_metrics_for_thresholds(_combined_df, thresholds):
+    results = []
+
+    for threshold in thresholds:
+        # Aplicar classificação com o threshold atual
+        metrics_df = apply_classification(_combined_df, threshold)
+
+        # Calcular médias das métricas para o threshold atual
+        precision_avg = metrics_df['precision'].mean()
+        accuracy_avg = metrics_df['accuracy'].mean()
+        sensitivity_avg = metrics_df['sensitivity'].mean()
+        specificity_avg = metrics_df['specificity'].mean()
+        f1_avg = metrics_df['f1_score'].mean()
+
+        # Adicionar resultados na lista
+        results.append([
+            threshold,
+            precision_avg,
+            accuracy_avg,
+            sensitivity_avg,
+            specificity_avg,
+            f1_avg
+        ])
+
+    # Criar um DataFrame com os resultados
+    result_df = pl.DataFrame(results, schema=["Threshold", "Accuracy", "Precision", "Sensitivity", "Specificity", "F1 Score"])
+
+    return result_df
+
+def display_metrics_table(_combined_df, thresholds):
+    # Calcular as métricas para cada threshold
+    result_df = calculate_metrics_for_thresholds(_combined_df, thresholds)
+
+    # Exibir a tabela no Streamlit
+    st.write("### Classification Metrics by Threshold")
+    st.dataframe(result_df.to_pandas())
+
 
 def show_classification(combined_df, label):
     thresholds = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
@@ -351,5 +330,8 @@ def show_classification(combined_df, label):
 
         if chart_format == "Confusion Matrix":
             show_confusion_matrix(df)
+
+        if chart_format == "Table":
+            display_metrics_table(combined_df, thresholds)
 
 

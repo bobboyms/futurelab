@@ -77,7 +77,7 @@ model = BreastCancerModel()
 criterion = nn.BCEWithLogitsLoss()  # Binary Cross-Entropy Loss
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-num_epochs = 10
+num_epochs = 300
 model.train()
 
 for epoch in range(num_epochs):
