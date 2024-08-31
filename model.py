@@ -22,13 +22,12 @@ project_log = Project(
 log_class = project_log.new_logger(
         section_name="Classificação",
         description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
-        chart_type=Type.Classification
     )
 
 log_gradientes = project_log.new_logger(
         section_name="Gradientes do modelo",
         description="Aqui está sendo monitorando o gradiente de 3 camadas do modelo",
-        chart_type=Type.Classification
+        buffer_sleep=4,
     )
 # Carregar o dataset Breast Cancer Wisconsin
 data = load_breast_cancer()
@@ -77,7 +76,7 @@ model = BreastCancerModel()
 criterion = nn.BCEWithLogitsLoss()  # Binary Cross-Entropy Loss
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-num_epochs = 300
+num_epochs = 100
 model.train()
 
 for epoch in range(num_epochs):
@@ -93,9 +92,9 @@ for epoch in range(num_epochs):
 
         # model.fc1.weight.grad
 
-        log_gradientes.log_histogram("FC 1",model.fc1.weight.grad, subsample_ratio=1.0)
-        log_gradientes.log_histogram("FC 2", model.fc2.weight.grad, subsample_ratio=1.0)
-        log_gradientes.log_histogram("FC 3", model.fc3.weight.grad, subsample_ratio=1.0)
+        log_gradientes.log_histogram("FC 1", model.fc1.weight.grad)
+        log_gradientes.log_histogram("FC 2", model.fc2.weight.grad)
+        log_gradientes.log_histogram("FC 3", model.fc3.weight.grad)
 
         optimizer.step()
 
@@ -111,7 +110,7 @@ for epoch in range(num_epochs):
     mean_loss = np.mean(loss_list).astype(float)
 
     print(f'Epoch {epoch+1}/{num_epochs}, Loss: {mean_loss:.4f}')
-    log_class.log_classification("Classificação",targets, outputs, epoch)
+    log_class.log_classification("Avaliacao",targets, outputs, epoch)
     log_class.log_scalar("Loss", {"train": mean_loss, "teste":0.025 * epoch},epoch)
 
     audio_path = '127_sample.wav'
@@ -119,7 +118,5 @@ for epoch in range(num_epochs):
     log_class.log_audio("Amostras de audio", data, sr, epoch)
 
 
-time.sleep(20)
+time.sleep(6)
 
-df = pl.read_parquet("logs/mnist/lab_1/classificação/Classificação/1.parquet")
-print(df)

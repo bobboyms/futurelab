@@ -6,11 +6,17 @@ import queue
 from datetime import datetime
 
 from pathlib import Path
+from typing import Union
+
+import torch
 
 from futurelabs.lab.write import histogram, scalar, audio, classification
 import numpy as np
 from futurelabs.lab.chart import Type
 from futurelabs.lab.functions import get_section_folder, DirectoryManager, Serializable, get_project_folder
+
+TensorOrArray = Union[torch.Tensor, np.ndarray]
+
 
 def get_current_time():
     # Obter a hora atual do computador
@@ -55,13 +61,13 @@ class Project(Serializable):
 
 
 class Logger:
-    def __init__(self, section_name: str, description: str, chart_type: Type, project_config: 'Project'):
+    def __init__(self, section_name: str, description: str, project_config: 'Project', buffer_sleep:int):
         self.section_name = section_name
         self.description = description
-        self.chart_type = chart_type
         self.has_folder = False
         self.project_config = project_config
         self.directory_manager = DirectoryManager()
+        self.buffer_sleep = buffer_sleep
         self.section_folder = get_section_folder(config={
             "laboratory_name": self.project_config.laboratory_name,
             "project_name": self.project_config.project_name,
@@ -79,20 +85,24 @@ class Logger:
             self.has_folder = True
 
 
-
-    def log_histogram(self, description: str, value: np.array, subsample_ratio=0.1):
+    def log_histogram(self, description: str, value: TensorOrArray):
         self.__ensure_folder_exists()
 
-        # print(len(value) * subsample_ratio)
         value = value.numpy().flatten()
-        subsampled_data = np.random.choice(value, size=int(len(value) * subsample_ratio), replace=False)
+        if isinstance(value, torch.Tensor):
+            value = value.numpy().flatten()
+        elif isinstance(value, np.ndarray):
+            value = value.flatten()
+        else:
+            raise RuntimeError("Type not supported")
 
         data = {
             "chart_type": Type.Histogram2d,
             "description": description,
-            "value": subsampled_data.flatten(),
+            "value": value.flatten(),
         }
         self.queue.put(data)
+
 
     def log_classification(self, description: str, real_label: list[int], predicted_label: list[float], step: int):
 
@@ -131,7 +141,7 @@ class Logger:
 
     def __consume(self):
         buffer = []  # Buffer para acumular os dados
-        delay_seconds = 10  # Define o intervalo de tempo para gravação
+        delay_seconds = self.buffer_sleep  # Define o intervalo de tempo para gravação
         while True:
             time.sleep(delay_seconds)
             for _ in range(self.queue.qsize()):
@@ -163,20 +173,10 @@ class Logger:
             # Se for um Histogram2d, adiciona os valores ao dicionário
             if data["chart_type"] == Type.Histogram2d:
 
-                if histogram_data_by_folder.get(folder) is None:
-                    histogram_data_by_folder[folder] = []
-
-                histogram_data_by_folder[folder].append(data["value"])
+                histogram(data["value"], folder, Type.Histogram2d)
 
             if data["chart_type"] == Type.LineChart:
 
-                # if scalar_data_by_folder.get(folder) is None:
-                #     scalar_data_by_folder[folder] = []
-                #
-                # scalar_data_by_folder[folder].append({
-                #     "value": data["value"],
-                #     "step": data["step"],
-                # })
                 scalar(data["value"], data["step"], folder, Type.LineChart)
 
             if data["chart_type"] == Type.AudioData:
@@ -187,8 +187,8 @@ class Logger:
 
 
         # Processa os histogramas para cada pasta
-        for folder, histogram_values in histogram_data_by_folder.items():
-            histogram(histogram_values, folder, Type.Histogram2d)
+        # for folder, histogram_values in histogram_data_by_folder.items():
+
 
         # for folder, scalar_values in scalar_data_by_folder.items():
         #     scalar(scalar_values, folder, Type.LineChart)
@@ -203,6 +203,6 @@ class Log:
     def __init__(self, project_config: Project):
         self.project_config = project_config
 
-    def new_logger(self, section_name: str, description: str, chart_type: Type) -> Logger:
-        return Logger(section_name, description, chart_type, self.project_config)
+    def new_logger(self, section_name: str, description: str, buffer_sleep=1) -> Logger:
+        return Logger(section_name, description, self.project_config, buffer_sleep=buffer_sleep)
 

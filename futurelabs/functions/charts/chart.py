@@ -1,3 +1,5 @@
+from cProfile import label
+
 import librosa
 import plotly
 import streamlit as st
@@ -7,7 +9,9 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 import matplotlib.pyplot as plt
 import librosa.display
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, roc_curve, auc, f1_score
+import torch
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, roc_curve, auc, f1_score, \
+    roc_auc_score
 from imblearn.metrics import specificity_score
 from imblearn.metrics import sensitivity_score
 import streamlit as st
@@ -59,71 +63,245 @@ def download_options(fig, label):
                     key=f"{label}_download_pdf"
                 )
 
+def show_percentile(df, label):
 
-def show_histogram2d(combined_df, label):
-    if combined_df is not None and "value" in combined_df.columns:
 
-        steps = len(combined_df["value"])
-        values_per_step = len(combined_df["value"][0])
+    lines_to_show = st.multiselect(
+        "Escolha as linhas a serem exibidas no gráfico:",
+        options=["Mean", "Standard Deviation", "25th Percentile", "50th Percentile (Median)", "75th Percentile"],
+        default=["25th Percentile", "50th Percentile (Median)", "75th Percentile"],
+        key=f"percentile_{label}"
+    )
 
-        # Definir taxa de amostragem dependendo do número de dados
-        if values_per_step <= 100:
-            sampling_rate = 1  # Subamostrar a cada step
+    def calculate_statistics(grad_tensor):
+
+        if isinstance(grad_tensor, torch.Tensor):
+            grad = grad_tensor.numpy().flatten()
+        elif isinstance(grad_tensor, np.ndarray):
+            grad = grad_tensor.flatten()
         else:
-            sampling_rate = max(steps * 0.01, 1)
+            grad = np.array(grad_tensor).flatten()
 
-        subsampled_steps = int(steps // sampling_rate)
+        return {
+            "mean": grad.mean(),
+            "std": grad.std(),
+            "p25": np.percentile(grad, 25),
+            "p50": np.percentile(grad, 50),
+            "p75": np.percentile(grad, 75)
+        }
 
-        data_df = pl.DataFrame({
-            "step": np.arange(subsampled_steps),
-            "value": [combined_df["value"][int(i * sampling_rate)] for i in range(subsampled_steps)]
-        })
+    # Aplicar a função e expandir os resultados diretamente no DataFrame
+    stats_df = df.with_columns(
+        pl.col("value").map_elements(lambda x: calculate_statistics(x), return_dtype=pl.Struct).alias("stats")
+    ).unnest("stats")
 
-        expanded_data = data_df.explode("value")
 
-        # Gráfico 2D com Plotly
-        fig = go.Figure(data=go.Histogram2d(
-            x=expanded_data["step"],
-            y=expanded_data["value"],
-            colorscale=[[0, 'rgb(12,51,131)'], [0.25, 'rgb(10,136,186)'], [0.5, 'rgb(242,211,56)'], [0.75, 'rgb(242,143,56)'], [1, 'rgb(217,30,30)']],
-            # nbinsx=subsampled_steps,
-            # nbinsy=100,
+
+    # Plotar as curvas
+    fig = go.Figure()
+    times = len(stats_df)
+
+    # Adiciona as curvas de estatísticas ao gráfico conforme seleção do usuário
+    if "Mean" in lines_to_show:
+        fig.add_trace(go.Scatter(
+            x=np.arange(1, times + 1),
+            y=stats_df["mean"],
+            mode='lines',
+            name='Mean Gradients',
+            line=dict(color='blue')
         ))
 
-        fig.update_layout(
-            xaxis_title="Step",
-            yaxis_title="Value",
-            title={
-                'text': f"{label}",
-                'x': 0.5,  # Centraliza o título
-                'xanchor': 'center',  # Define a âncora de referência como o centro
-                'yanchor': 'top'
-            }
+    if "Standard Deviation" in lines_to_show:
+        fig.add_trace(go.Scatter(
+            x=np.arange(1, times + 1),
+            y=stats_df["std"],
+            mode='lines',
+            name='Std Dev Gradients',
+            line=dict(color='red')
+        ))
+
+    if "25th Percentile" in lines_to_show:
+        fig.add_trace(go.Scatter(
+            x=np.arange(1, times + 1),
+            y=stats_df["p25"],
+            mode='lines',
+            name='25th Percentile',
+            line=dict(dash='dot', color='green')
+        ))
+
+    if "50th Percentile (Median)" in lines_to_show:
+        fig.add_trace(go.Scatter(
+            x=np.arange(1, times + 1),
+            y=stats_df["p50"],
+            mode='lines',
+            name='50th Percentile (Median)',
+            line=dict(dash='dot', color='orange')
+        ))
+
+    if "75th Percentile" in lines_to_show:
+        fig.add_trace(go.Scatter(
+            x=np.arange(1, times + 1),
+            y=stats_df["p75"],
+            mode='lines',
+            name='75th Percentile',
+            line=dict(dash='dot', color='purple')
+        ))
+
+    # Configurações do layout
+    fig.update_layout(
+        title=f'Evolution of Gradients During Training - {label}',
+        xaxis_title='Epoch',
+        yaxis_title='Gradient Values',
+        legend_title='Statistics',
+        template='plotly_white',
+        yaxis=dict(
+            exponentformat='e',  # Notação científica
+            showexponent='all'  # Mostrar o expoente para todos os ticks
+        )
+    )
+
+
+    # Mostrar a figura
+    st.plotly_chart(fig)
+
+def show_norma(df, label):
+
+    def converter(row):
+        if isinstance(row, torch.Tensor):
+            grad = row.numpy().flatten()
+        elif isinstance(row, np.ndarray):
+            grad = row.flatten()
+        else:
+            grad = np.array(row).flatten()
+
+        return grad
+
+    l2_norms = []
+    for row in df.iter_rows():
+        grad_tensor = converter(row[0])
+        l2_norm = np.linalg.norm(grad_tensor)
+        l2_norms.append(l2_norm)
+
+    # Converter os resultados para arrays numpy
+    # steps = np.array([row[0] for row in df.iter_rows()])
+    l2_norms = np.array(l2_norms)
+
+    # Criar o gráfico da magnitude total dos gradientes ao longo do tempo
+    times = len(df)
+    fig = go.Figure(data=go.Scatter(
+        x=np.arange(1, times + 1),
+        y=l2_norms,
+        mode='lines+markers',
+        name='L2 Norm'
+    ))
+
+    fig.update_layout(
+        title=f'Magnitude Total (Norma L2) - {label}',
+        xaxis_title='Step',
+        yaxis_title='L2 Norm',
+        template='plotly_dark',
+        yaxis=dict(
+            exponentformat='e',  # Notação científica
+            showexponent='all'  # Mostrar o expoente para todos os ticks
+        )
+    )
+
+    # fig.show()
+    st.plotly_chart(fig)
+
+
+def show_histogram(df, label):
+    # options = list(range(len(df)))
+
+    selected_index = st.number_input('Select Step:', min_value=0, max_value=len(df),
+                                    value=0, key=f"{label}_key_histogram")
+
+    def converter(row):
+        if isinstance(row, torch.Tensor):
+            grad = row.numpy().flatten()
+        elif isinstance(row, np.ndarray):
+            grad = row.flatten()
+        else:
+            grad = np.array(row).flatten()
+
+        return grad
+
+    # Acessar o gradiente do registro selecionado
+    selected_grad = converter(df[selected_index, "value"])
+
+
+    # Configurar e exibir o gráfico
+    min_val = selected_grad.min()
+    max_val = selected_grad.max()
+    fig = go.Figure(data=go.Histogram2d(
+        x=np.arange(0, len(selected_grad)),
+        y=selected_grad,
+        nbinsx=100,
+        nbinsy=30,
+        # ybins=dict(start=min_val, end=max_val),
+        colorscale=[
+            [0, 'rgb(12,51,131)'],
+            [0.25, 'rgb(10,136,186)'],
+            [0.5, 'rgb(242,211,56)'],
+            [0.75, 'rgb(242,143,56)'],
+            [1, 'rgb(217,30,30)']
+        ]
+    ))
+
+    fig.update_layout(
+        # xaxis=dict(
+        #     exponentformat='e',  # Notação científica
+        #     showexponent='all'  # Mostrar o expoente para todos os ticks
+        # ),
+        yaxis=dict(
+            exponentformat='e',  # Notação científica
+            showexponent='all'  # Mostrar o expoente para todos os ticks
+        )
+    )
+
+    st.plotly_chart(fig)
+
+
+def show_histogram2d(combined_df, label):
+    st.write(f"### {label}")
+    if combined_df is not None and "value" in combined_df.columns:
+        chart_format = st.radio(
+            "Select a chart", ("Percentile", "Norma L2", "Histogram"), horizontal=True, key=f"{label}_histogram"
         )
 
-        # Exibir o gráfico no Streamlit
-        st.plotly_chart(fig)
+        if chart_format == "Percentile":
+            show_percentile(combined_df, label)
+        if chart_format == "Norma L2":
+            show_norma(combined_df, label)
+        if chart_format == "Histogram":
+            show_histogram(combined_df, label)
 
-        # Adicionar um botão discreto para abrir as opções de download
-        download_options(fig, label)
 
 
 
-
-def show_metrics(combined_df, label, start=1):
+def show_metrics(combined_df, label ,show_title=True, start=1):
+    if show_title:
+        st.write(f"### {label}")
 
     available_columns = combined_df.columns[start:]
     selected_columns = st.multiselect(
-        "Select metrics to display", available_columns, default=available_columns
+        "Select metrics to display", available_columns, default=available_columns, key=f"show_metrics_{label}"
     )
     df = combined_df.sort('step')
     fig = px.line(df, x='step', y=selected_columns, markers=True)
+    fig.update_layout(
+        yaxis=dict(
+            exponentformat='e',  # Notação científica
+            showexponent='all'  # Mostrar o expoente para todos os ticks
+        )
+    )
     st.plotly_chart(fig)
     download_options(fig, label)
 
 
 
 def show_audio(audio_files, label):
+    st.write(f"### {label}")
     with st.container():
         selected_index = st.slider('Select audio file',
                                    min_value=0,
@@ -173,15 +351,18 @@ def show_audio(audio_files, label):
 
 
 
-def show_confusion_matrix(df):
-    specific_step = st.number_input('Select Step:', min_value=int(df['step'].min()), max_value=int(df['step'].max()),
-                                    value=0)
+def show_confusion_matrix(df, label):
+
+    min = int(df['step'].min())
+    max = int(df['step'].max())
+    specific_step = st.number_input('Select Step:', min_value=min, max_value=max,
+                                    value=max-1, key=f"{label}_confusion_matrix")
 
     step_data = df.filter(pl.col("step") == specific_step)
 
     if not step_data.is_empty():
         real_labels = step_data["real_labels_int"].to_list()
-        predicted_labels = step_data["predicted_labels"].to_list()
+        predicted_labels = step_data["predicted_label_int"].to_list()
 
         conf_matrix = confusion_matrix(real_labels[0], predicted_labels[0])
 
@@ -204,13 +385,17 @@ def show_confusion_matrix(df):
         st.write(f"No data available for Step {specific_step}")
 
 
-@st.cache_data(ttl=120)
+# @st.cache_data(ttl=120)
 def apply_classification(_combined_df, threshold):
 
     # Explode as listas de rótulos
     df = _combined_df.explode(["real_label", "predicted_label"])
 
-    # Mapear os rótulos previstos binários
+    df = df.with_columns([
+        pl.col("predicted_label").alias("predicted_probs")
+    ])
+
+
     df = df.with_columns([
         pl.col("predicted_label").map_elements(
             lambda x: process_binary_classification(x, threshold),
@@ -218,11 +403,17 @@ def apply_classification(_combined_df, threshold):
         ).alias("predicted_label_binary")
     ])
 
+
+
     # Agrupar por step
     grouped_df = df.group_by("step").agg([
         pl.col("real_label").alias("real_labels"),
-        pl.col("predicted_label_binary").alias("predicted_labels")
+        # pl.col("predicted_label").alias("predicted_label"),
+        pl.col("predicted_label_binary").alias("predicted_label_int")
+
     ])
+
+    print(grouped_df)
 
     # Converter a coluna 'real_labels' para uma lista de Int16
     grouped_df = grouped_df.with_columns([
@@ -231,56 +422,61 @@ def apply_classification(_combined_df, threshold):
 
     # Função para calcular a precisão
     def calculate_precision(row):
-        return precision_score(row["real_labels_int"], row["predicted_labels"], average='macro', zero_division=0) * 100
+        return precision_score(row["real_labels_int"], row["predicted_label_int"], average='macro', zero_division=0) * 100
 
     def calculate_accuracy(row):
-        return accuracy_score(row["real_labels_int"], row["predicted_labels"]) * 100
+        return accuracy_score(row["real_labels_int"], row["predicted_label_int"]) * 100
 
     def calculate_sensitivity(row):
-        return sensitivity_score(row["real_labels_int"], row["predicted_labels"], average='macro') * 100
+        return sensitivity_score(row["real_labels_int"], row["predicted_label_int"], average='macro') * 100
 
     def calculate_specificity(row):
-        return specificity_score(row["real_labels_int"], row["predicted_labels"], average='macro') * 100
+        return specificity_score(row["real_labels_int"], row["predicted_label_int"], average='macro') * 100
 
     def calculate_f1(row):
-        return f1_score(row["real_labels_int"],  row["predicted_labels"], average='macro', zero_division=0) * 100
+        return f1_score(row["real_labels_int"],  row["predicted_label_int"], average='macro', zero_division=0) * 100
 
 
     # Adicionar a coluna de precisão
     grouped_df = grouped_df.with_columns([
-        pl.struct(["real_labels_int", "predicted_labels"]).map_elements(
+        pl.struct(["real_labels_int", "predicted_label_int"]).map_elements(
             lambda x: calculate_precision(x),
             return_dtype=pl.Float64
         ).alias("precision"),
-        pl.struct(["real_labels_int", "predicted_labels"]).map_elements(
+        pl.struct(["real_labels_int", "predicted_label_int"]).map_elements(
             lambda x: calculate_accuracy(x),
             return_dtype=pl.Float64
         ).alias("accuracy"),
 
-        pl.struct(["real_labels_int", "predicted_labels"]).map_elements(
+        pl.struct(["real_labels_int", "predicted_label_int"]).map_elements(
             lambda x: calculate_sensitivity(x),
             return_dtype=pl.Float64
         ).alias("sensitivity"),
-        pl.struct(["real_labels_int", "predicted_labels"]).map_elements(
+        pl.struct(["real_labels_int", "predicted_label_int"]).map_elements(
             lambda x: calculate_specificity(x),
             return_dtype=pl.Float64
         ).alias("specificity"),
-        pl.struct(["real_labels_int", "predicted_labels"]).map_elements(
+        pl.struct(["real_labels_int", "predicted_label_int"]).map_elements(
             lambda x: calculate_f1(x),
             return_dtype=pl.Float64
         ).alias("f1_score")
     ]).sort("step")
 
-
+    # print(grouped_df.head())
     return grouped_df
 
 @st.cache_data(ttl=120)
-def calculate_metrics_for_thresholds(_combined_df, thresholds):
-    results = []
+def calculate_metrics_for_thresholds(_combined_df, thresholds, specific_step):
 
+
+
+
+    step_data = _combined_df.filter(pl.col("step") == specific_step)
+
+    results = []
     for threshold in thresholds:
         # Aplicar classificação com o threshold atual
-        metrics_df = apply_classification(_combined_df, threshold)
+        metrics_df = apply_classification(step_data, threshold)
 
         # Calcular médias das métricas para o threshold atual
         precision_avg = metrics_df['precision'].mean()
@@ -305,20 +501,70 @@ def calculate_metrics_for_thresholds(_combined_df, thresholds):
     return result_df
 
 def display_metrics_table(_combined_df, thresholds):
+    st.write("### Classification Metrics by Threshold")
+
+    min = int(_combined_df['step'].min())
+    max = int(_combined_df['step'].max())
+    specific_step = st.number_input('Select Step:', min_value=min, max_value=max,
+                                    value=max, key=f"{label}_auc")
     # Calcular as métricas para cada threshold
-    result_df = calculate_metrics_for_thresholds(_combined_df, thresholds)
+    result_df = calculate_metrics_for_thresholds(_combined_df, thresholds, specific_step)
 
     # Exibir a tabela no Streamlit
-    st.write("### Classification Metrics by Threshold")
     st.dataframe(result_df.to_pandas())
 
 
+def show_auc(df, label):
+
+    min = int(df['step'].min())
+    max = int(df['step'].max())
+    specific_step = st.number_input('Select Step:', min_value=min, max_value=max,
+                                    value=max, key=f"{label}_auc")
+
+    step_data = df.filter(pl.col("step") == specific_step)
+
+    if not step_data.is_empty():
+        real_labels = step_data["real_label"].to_list()
+        predicted_labels = step_data["predicted_label"].to_list()
+
+        # Calculando a AUC-ROC
+        auc = roc_auc_score(real_labels[0], predicted_labels[0])
+
+        # Gerando a curva ROC
+        fpr, tpr, thresholds = roc_curve(real_labels[0], predicted_labels[0])
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name=f'ROC curve (area = {auc:.2f})',
+                                 line=dict(color='darkorange', width=2)))
+        fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random chance',
+                                 line=dict(color='navy', width=2, dash='dash')))
+
+        # Configurando o layout
+        fig.update_layout(
+            title='Receiver Operating Characteristic',
+            xaxis_title='False Positive Rate',
+            yaxis_title='True Positive Rate',
+            showlegend=True,
+            xaxis=dict(range=[0.0, 1.0]),
+            yaxis=dict(range=[0, 1.05])
+        )
+
+        # Exibindo o gráfico
+        st.plotly_chart(fig)
+
+
+    else:
+        st.write(f"No data available for Step {specific_step}")
+
 def show_classification(combined_df, label):
+    st.write(f"### {label}")
     thresholds = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
     threshold = st.selectbox('Select a threshold:', options=thresholds, index=0)
 
     df = apply_classification(combined_df, threshold)
-    droped_df = df.drop(["real_labels", "predicted_labels", "real_labels_int"])
+
+    droped_df = df.drop(["real_labels", "predicted_label_int", "real_labels_int"])
 
     with st.container():
         chart_format = st.radio(
@@ -326,10 +572,13 @@ def show_classification(combined_df, label):
         )
 
         if chart_format == "Scores":
-            show_metrics(droped_df, f"{label}_xs")
+            show_metrics(droped_df, f"{label}_xs", show_title=False)
 
         if chart_format == "Confusion Matrix":
-            show_confusion_matrix(df)
+            show_confusion_matrix(df, label)
+
+        if chart_format == "AUC-ROC":
+            show_auc(combined_df, label)
 
         if chart_format == "Table":
             display_metrics_table(combined_df, thresholds)
