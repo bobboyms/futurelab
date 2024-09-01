@@ -214,7 +214,7 @@ def show_histogram(df, label):
     # options = list(range(len(df)))
 
     selected_index = st.number_input('Select Step:', min_value=0, max_value=len(df),
-                                    value=0, key=f"{label}_key_histogram")
+                                    value=len(df) -1, key=f"{label}_key_histogram")
 
     def converter(row):
         if isinstance(row, torch.Tensor):
@@ -288,7 +288,7 @@ def show_metrics(combined_df, label ,show_title=True, start=1):
         "Select metrics to display", available_columns, default=available_columns, key=f"show_metrics_{label}"
     )
     df = combined_df.sort('step')
-    fig = px.line(df, x='step', y=selected_columns, markers=True)
+    fig = px.line(df, x='step', y=selected_columns, markers=False)
     fig.update_layout(
         yaxis=dict(
             exponentformat='e',  # Notação científica
@@ -465,11 +465,8 @@ def apply_classification(_combined_df, threshold):
     # print(grouped_df.head())
     return grouped_df
 
-@st.cache_data(ttl=120)
+# @st.cache_data(ttl=120)
 def calculate_metrics_for_thresholds(_combined_df, thresholds, specific_step):
-
-
-
 
     step_data = _combined_df.filter(pl.col("step") == specific_step)
 

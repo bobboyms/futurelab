@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import streamlit as st
 
 
-# @st.cache_data
+@st.cache_data(ttl=120)
 def load_histogram2d_data(parent_folder, section):
     directory = os.path.join(parent_folder, section)
     parquet_files = list(Path(directory).glob("*.parquet"))
@@ -48,7 +48,7 @@ def load_histogram2d_data(parent_folder, section):
         return pl.DataFrame()
 
 
-# @st.cache_data
+@st.cache_data(ttl=120)
 def load_scalar_data(parent_folder, section):
     directory = os.path.join(parent_folder, section)
     parquet_files = list(Path(directory).glob("*.parquet"))
@@ -87,7 +87,7 @@ def load_audio_data(parent_folder, section):
     audio_files = list(Path(directory).glob("*.wav"))
     return sorted(audio_files, key=lambda x: x.name)
 
-# @st.cache_data
+@st.cache_data(ttl=120)
 def load_classification(parent_folder, section):
     directory = os.path.join(parent_folder, section)
     parquet_files = list(Path(directory).glob("*.parquet"))

@@ -37,11 +37,12 @@ def dashboard():
     charts, parent_folder = directory_tree.get_chart(parent_folder, section_choice)
     num_columns = 1 if page_width < 1100 else 2
 
-    for i in range(0, len(charts), num_columns):
+    sorted_charts = sorted(charts)
+    for i in range(0, len(sorted_charts), num_columns):
 
         cols = st.columns(num_columns)
 
-        for chart, col in zip(charts[i:i + 2], cols):
+        for chart, col in zip(sorted_charts[i:i + 2], cols):
 
             chart_type, ok = get_chart_type(parent_folder, chart)
 
